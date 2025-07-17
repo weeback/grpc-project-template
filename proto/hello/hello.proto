@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+import "common/standard.proto";
+
+// package name will be call by other package,
+// this same proto/path/to/package/file.proto -> path.to.package
+package hello;
+
+option go_package = "github/weeback/grpc-project-template/pb/hello;hellopb";
+
+
+service HelloService {
+  rpc SayHello (HelloRequest) returns (HelloReply);
+
+  // UseStandardResponse is define a function of HelloService interface;
+  // path.to.package.Client and path.to.package.StandardResponse has defined by proto/path/to/package/file.proto
+  rpc UseStandardResponse(common.ClientJwt) returns (common.StandardResponse);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+
+message PayloadRequest {
+  // Add any additional fields you need for the payload
+}
+
+message PayloadResponse {
+  // Add any additional fields you need for the payload
+}

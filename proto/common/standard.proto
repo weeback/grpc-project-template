@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+// package name will be call by other package,
+// this same proto/path/to/package/file.proto -> path.to.package
+package common;
+
+option go_package = "github/weeback/grpc-project-template/pb/common;commonpb";
+
+// Request message for JWT-based operations (shared by multiple functions)
+message ClientJwt {
+  string req_id = 1;
+  string jwt = 2;
+}
+
+// Standard response structure for all APIs
+message StandardResponse {
+  int32 code = 1;                    // Response code (e.g., 0 for success)
+  string message = 2;                // Response message
+  google.protobuf.Any payload = 3;   // Payload containing specific response data
+}

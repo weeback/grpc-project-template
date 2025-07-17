@@ -1,0 +1,150 @@
+---
+title: "gRPC Project Template - Architecture & Dependencies"
+config:
+  flowchart:
+    htmlLabels: false
+    nodeSpacing: 30
+    rankSpacing: 50
+---
+flowchart TB
+    %% Build & Deploy Layer
+    subgraph build ["🔨 Build & Deploy"]
+        direction LR
+        MakefileCloudRun["Makefile.CloudRun-HelloService<br/>📋 Cloud Run Deploy"]
+        Dockerfile["HelloService.Dockerfile<br/>🐳 Multi-stage Build"]
+        Makefile["Makefile<br/>⚙️ Build Tools"]
+        
+        MakefileCloudRun -->|"build-docker"| Dockerfile
+        Dockerfile -->|"make build"| Makefile
+    end
+
+    %% Entry Point
+    subgraph entry ["🚀 Entry Point"]
+        MainGo["cmd/HelloService/main.go<br/>🎯 Application Entry"]
+    end
+
+    %% Configuration Layer  
+    subgraph config ["⚙️ Configuration"]
+        ConfigEnv["config/deploy_env.go<br/>🌍 Environment Config"]
+        ConfigGrpc["config/grpc.go<br/>📡 gRPC Config"]
+        ConfigFirebase["config/firebase_admin.go<br/>🔥 Firebase Config"]
+    end
+
+    %% Application Layer (Business Logic)
+    subgraph app ["💼 Application Layer"]
+        HelloController["application/hello/controller.go<br/>🎮 Business Logic"]
+        HelloValidation["application/hello/validation.go<br/>✅ Input Validation"]
+        HelloUtils["application/hello/utils.go<br/>🛠️ Helper Functions"]
+    end
+
+    %% Domain Layer (Entities & Interfaces)
+    subgraph domain ["🏛️ Domain Layer"]
+        HelloRepo["entity/hello/repository.go<br/>📋 Repository Interface"]
+        HelloEntity["entity/hello/<br/>🎯 Domain Entity"]
+        DbEntity["entity/db/example_table.go<br/>🗃️ Database Entity"]
+        
+        HelloRepo -.->|"implements"| HelloEntity
+    end
+
+    %% Infrastructure Layer
+    subgraph infra ["🏗️ Infrastructure Layer"]
+        direction TB
+        
+        subgraph transport ["🚦 Transport Layer"]
+            GrpcHandler["transport/grpc/hello_service.go<br/>📡 gRPC Handler"]
+            HttpHandler["transport/http/hello_service.go<br/>🌐 HTTP Handler"]
+            HttpModel["transport/http/model.go<br/>📄 HTTP Models"]
+        end
+        
+        subgraph database ["🗄️ Database Layer"]
+            MongoDb["mongodb/mongodb.go<br/>🍃 MongoDB Connection"]
+            MongoUtils["mongodb/utils.go<br/>🔧 MongoDB Utils"]
+        end
+        
+        subgraph external ["🌐 External Services"]
+            CloudflareService["cloudflare/captcha.go<br/>☁️ Cloudflare Service"]
+            FirebaseService["firebase/firebase-admin.go<br/>🔥 Firebase Service"]
+        end
+    end
+
+    %% Generated Code Layer
+    subgraph generated ["🤖 Generated Code"]
+        ProtobufHello["pb/hello/hello.pb.go<br/>📝 Proto Messages"]
+        GrpcHello["pb/hello/hello_grpc.pb.go<br/>📡 gRPC Service"]
+        ProtobufCommon["pb/common/standard.pb.go<br/>📋 Common Messages"]
+    end
+
+    %% Proto Definitions
+    subgraph proto ["📜 Proto Definitions"]
+        ProtoHello["proto/hello/hello.proto<br/>📝 Service Definition"]
+        ProtoCommon["proto/common/standard.proto<br/>📋 Common Types"]
+    end
+
+    %% Shared Packages
+    subgraph pkg ["📦 Shared Packages"]
+        PkgNet["pkg/net/<br/>🌐 Network Utils"]
+        PkgJwt["pkg/jwt/<br/>🔐 JWT Utils"] 
+        PkgMongo["pkg/mongodb/<br/>🍃 MongoDB Utils"]
+        PkgMain["pkg/grpc-project-template.go<br/>📋 Main Package"]
+    end
+
+    %% Mock Layer
+    subgraph mock ["🎭 Mock Layer"]
+        MockCaptcha["mock/cloudflare_captcha_service.go<br/>🎭 Mock Captcha"]
+    end
+
+    %% Dependencies Flow
+    Makefile -->|"builds"| MainGo
+    MainGo --> ConfigEnv
+    MainGo --> ConfigGrpc  
+    MainGo --> ConfigFirebase
+    MainGo --> HelloController
+    MainGo --> GrpcHandler
+    MainGo --> HttpHandler
+    MainGo --> MongoDb
+    MainGo --> PkgNet
+    MainGo --> PkgMain
+
+    %% Application Layer Dependencies
+    HelloController -->|"implements"| HelloRepo
+    HelloController --> HelloValidation
+    HelloController --> HelloUtils
+    HelloController --> DbEntity
+    HelloController --> ProtobufHello
+    HelloController --> ProtobufCommon
+
+    %% Transport Layer Dependencies
+    GrpcHandler -->|"uses"| HelloRepo
+    GrpcHandler --> ProtobufHello
+    HttpHandler -->|"uses"| HelloRepo
+    HttpHandler --> ProtobufHello
+    HttpHandler --> HttpModel
+    HttpHandler --> PkgNet
+
+    %% Infrastructure Dependencies
+    MongoDb --> PkgMongo
+    MongoDb --> DbEntity
+    CloudflareService --> MockCaptcha
+    FirebaseService --> ConfigFirebase
+
+    %% Proto Generation
+    ProtoHello -->|"protoc generates"| ProtobufHello
+    ProtoHello -->|"protoc generates"| GrpcHello
+    ProtoCommon -->|"protoc generates"| ProtobufCommon
+
+    %% Styling
+    classDef buildLayer fill:#FFE4E1,stroke:#FF6B6B,stroke-width:2px
+    classDef appLayer fill:#E8F5E8,stroke:#4CAF50,stroke-width:2px
+    classDef domainLayer fill:#E3F2FD,stroke:#2196F3,stroke-width:2px
+    classDef infraLayer fill:#FFF3E0,stroke:#FF9800,stroke-width:2px
+    classDef protoLayer fill:#F3E5F5,stroke:#9C27B0,stroke-width:2px
+    classDef pkgLayer fill:#E0F2F1,stroke:#009688,stroke-width:2px
+    classDef mockLayer fill:#FFFDE7,stroke:#FFC107,stroke-width:2px
+
+    class build buildLayer
+    class entry,config appLayer
+    class domain domainLayer
+    class infra infraLayer
+    class generated,proto protoLayer
+    class pkg pkgLayer
+    class mock mockLayer

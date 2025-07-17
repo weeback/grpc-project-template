@@ -1,0 +1,94 @@
+# Makefile for Application
+.DEFAULT_GOAL := info
+.PHONY: default info active-service-account build-docker deploy
+SHELL = /usr/bin/env bash
+
+# Set the default project ID
+GOOGLE_CLOUD_PROJECT = $(shell gcloud config get-value project)
+# Check if GOOGLE_CLOUD_PROJECT is set
+ifeq ($(GOOGLE_CLOUD_PROJECT),'unset')
+    $(error GOOGLE_CLOUD_PROJECT is not set. Please run 'gcloud config set project [PROJECT_ID]' to set the project.)
+endif
+ifeq ($(strip $(GOOGLE_CLOUD_PROJECT)),)
+    $(error GOOGLE_CLOUD_PROJECT is empty. Please run 'gcloud config set project [PROJECT_ID]' to set the project.)
+endif
+
+# Set the default project number
+GOOGLE_CLOUD_PROJECT_NUMBER = $(shell gcloud projects describe $(GOOGLE_CLOUD_PROJECT) --format='get(projectNumber)')
+# Set the default service name
+GOOGLE_CLOUD_SERVICE_NAME = grpc-project-template-srv
+# Set the default image tag
+GOOGLE_CLOUD_IMAGE_TAG = latest
+# Set the default region
+GOOGLE_CLOUD_REGION = asia-southeast1
+# Set the default credHelper
+GOOGLE_CLOUD_CREDHELPER = asia.gcr.io
+# Set the default credHelper for Artifact Registry (format LOCATION-docker.pkg.dev)
+GOOGLE_CLOUD_ARTIFACT_DOMAIN = asia-docker.pkg.dev
+# Set the default credHelper for Artifact Registry
+GOOGLE_CLOUD_ARTIFACT_REPO_ID = asia-gcr-repo
+# Set the default image name
+GOOGLE_CLOUD_IMAGE_NAME = $(GOOGLE_CLOUD_CREDHELPER)/$(GOOGLE_CLOUD_PROJECT)/$(GOOGLE_CLOUD_SERVICE_NAME)
+# Same as above but for Artifact Registry (remove artifact-registry)
+GOOGLE_CLOUD_ARTIFACT_REG = $(GOOGLE_CLOUD_ARTIFACT_DOMAIN)/$(GOOGLE_CLOUD_PROJECT)/$(GOOGLE_CLOUD_ARTIFACT_REPO_ID)/$(GOOGLE_CLOUD_SERVICE_NAME)
+# Set the default service URL
+GOOGLE_CLOUD_SERVICE_URL = https://$(GOOGLE_CLOUD_SERVICE_NAME)-$(GOOGLE_CLOUD_PROJECT_NUMBER).$(GOOGLE_CLOUD_REGION).run.app
+# Set the default service account
+GOOGLE_CLOUD_SERVICE_ACCOUNT = $(GOOGLE_CLOUD_SERVICE_NAME)@$(GOOGLE_CLOUD_PROJECT).iam.gserviceaccount.com
+# Set the default service account key file
+GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_FILE = $(GOOGLE_CLOUD_SERVICE_NAME).json
+# Set the default service account key file path
+GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_FILE_PATH = $(shell pwd)/$(GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_FILE)
+
+# Set the default image name by local builder
+LOCAL_IMAGE_NAME = $(GOOGLE_CLOUD_PROJECT)/$(GOOGLE_CLOUD_SERVICE_NAME)
+
+# info
+info:
+	@echo "Project: $(GOOGLE_CLOUD_PROJECT) | $(GOOGLE_CLOUD_PROJECT_NUMBER)"
+	@echo "Service: $(GOOGLE_CLOUD_SERVICE_NAME)"
+	@echo "Region: $(GOOGLE_CLOUD_REGION)"
+	@echo "Image: $(GOOGLE_CLOUD_IMAGE_NAME):$(GOOGLE_CLOUD_IMAGE_TAG)"
+	@echo "Service URL: $(GOOGLE_CLOUD_SERVICE_URL)"
+	@echo "Service Account: $(GOOGLE_CLOUD_SERVICE_ACCOUNT)"
+	@echo "Service Account Key File: $(GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_FILE)"
+	@echo "Service Account Key File Path: $(GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_FILE_PATH)"
+	@echo "============================================================================"
+
+# deploy to Cloud Run by docker-image
+deploy: build-docker active-service-account
+	@echo "Deploying application to Cloud Run..."
+	@gcloud run deploy $(GOOGLE_CLOUD_SERVICE_NAME) --image $(GOOGLE_CLOUD_IMAGE_NAME):$(GOOGLE_CLOUD_IMAGE_TAG) \
+		--min-instances=0 --max-instances=100 --concurrency=80 \
+		--platform managed \
+		--allow-unauthenticated --region $(GOOGLE_CLOUD_REGION) \
+		--project $(GOOGLE_CLOUD_PROJECT) --quiet || { echo "Failed to deploy application"; exit 1; }
+	@echo "Application deployed successfully"
+
+# Add this command to end of targer deploy to remove image docker in artifact registry
+# @echo "Deleting Docker image from Artifact Registry..."
+# @gcloud artifacts docker images delete $(GOOGLE_CLOUD_ARTIFACT_REG):$(GOOGLE_CLOUD_IMAGE_TAG) \
+#     --quiet --delete-tags || { echo "Failed to delete Docker image"; exit 1; }
+# @echo "Docker image deleted successfully"
+
+build-docker: active-service-account
+	@echo "Building docker image..."
+	@docker build -t $(GOOGLE_CLOUD_IMAGE_NAME):$(GOOGLE_CLOUD_IMAGE_TAG) -f HelloService.Dockerfile . || { echo "Failed to build docker image"; exit 1; }
+	@echo "Docker image built successfully"
+	@echo "Authenticating with Google Container Registry..."
+	@gcloud auth configure-docker $(GOOGLE_CLOUD_CREDHELPER) --quiet 2> /dev/null
+	@echo "Pushing docker image to Google Container Registry..."
+	@docker push $(GOOGLE_CLOUD_IMAGE_NAME):$(GOOGLE_CLOUD_IMAGE_TAG) || { echo "Failed to push docker image"; echo "Please contact your administrator to request role authentication. (https://cloud.google.com/run/docs/deploying?authuser=1#required_roles)"; exit 1; }
+	@echo "Docker image pushed successfully"
+
+active-service-account:
+	@echo "Authenticating with service account..."
+	@if [ -f "$(GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_FILE_PATH)" ]; then \
+		echo "Key file found at $(GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_FILE_PATH), using service account key file..."; \
+		gcloud auth activate-service-account --key-file=$(GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_FILE_PATH); \
+	else \
+		echo "Key file not found. Using current gcloud CLI credentials..."; \
+		gcloud auth list; \
+		echo "Use 'gcloud config set account [your-select]' to change profile. Or"; \
+		echo "Use 'gcloud auth [new-auth-name] --key-file=/path/to/sa-key.json'"; \
+	fi
