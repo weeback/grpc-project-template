@@ -41,6 +41,6 @@ func (ins *controller) UseStandardResponse(ctx context.Context, request *pb.Payl
 	// This is just a placeholder implementation
 	return &common.StandardResponse{
 		Code:    200,
-		Message: "Standard response used",
+		Message: "Hello " + request.GetName(),
 	}, nil
 }

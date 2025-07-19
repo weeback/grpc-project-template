@@ -60,6 +60,35 @@ func SignWithClaims(key interface{}, payload any, opts ...*Option) (string, erro
 	return jwt.NewWithClaims(method, &claims).SignedString(key)
 }
 
+func ParseClaimsWithoutVerification(pub ed25519.PublicKey, str string) (*MapClaims, error) {
+	parsedToken, err := jwt.ParseWithClaims(str, &MapClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodEd25519); ok {
+			return pub, nil
+		}
+		return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+	}, jwt.WithoutClaimsValidation())
+
+	switch {
+	case errors.Is(err, jwt.ErrTokenExpired):
+		fmt.Println("❌ Token hết hạn")
+	case errors.Is(err, jwt.ErrTokenNotValidYet):
+		fmt.Println("❌ Token chưa đến thời điểm hợp lệ (nbf)")
+	case errors.Is(err, jwt.ErrTokenUsedBeforeIssued):
+		fmt.Println("❌ Token được sử dụng trước khi được phát hành (iat)")
+	case errors.Is(err, jwt.ErrTokenSignatureInvalid):
+		fmt.Println("❌ Chữ ký không hợp lệ")
+	default:
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if claim, ok := parsedToken.Claims.(*MapClaims); ok {
+		return claim, nil
+	}
+	return nil, fmt.Errorf("invalid token claims")
+}
+
 func ParseClaims(pub ed25519.PublicKey, str string) (*MapClaims, error) {
 	parsedToken, err := jwt.ParseWithClaims(str, &MapClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodEd25519); ok {

@@ -114,7 +114,9 @@ func (x *HelloReply) GetMessage() string {
 }
 
 type PayloadRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Add any additional fields you need for the payload
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -149,8 +151,17 @@ func (*PayloadRequest) Descriptor() ([]byte, []int) {
 	return file_hello_hello_proto_rawDescGZIP(), []int{2}
 }
 
+func (x *PayloadRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 type PayloadResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Add any additional fields you need for the payload
+	Message       string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -185,6 +196,13 @@ func (*PayloadResponse) Descriptor() ([]byte, []int) {
 	return file_hello_hello_proto_rawDescGZIP(), []int{3}
 }
 
+func (x *PayloadResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_hello_hello_proto protoreflect.FileDescriptor
 
 const file_hello_hello_proto_rawDesc = "" +
@@ -194,9 +212,11 @@ const file_hello_hello_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"&\n" +
 	"\n" +
 	"HelloReply\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\"\x10\n" +
-	"\x0ePayloadRequest\"\x11\n" +
-	"\x0fPayloadResponse2\x86\x01\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"$\n" +
+	"\x0ePayloadRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"+\n" +
+	"\x0fPayloadResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\x86\x01\n" +
 	"\fHelloService\x122\n" +
 	"\bSayHello\x12\x13.hello.HelloRequest\x1a\x11.hello.HelloReply\x12B\n" +
 	"\x13UseStandardResponse\x12\x11.common.ClientJwt\x1a\x18.common.StandardResponseB7Z5github/weeback/grpc-project-template/pb/hello;hellopbb\x06proto3"

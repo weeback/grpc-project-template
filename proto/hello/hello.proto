@@ -27,8 +27,10 @@ message HelloReply {
 
 message PayloadRequest {
   // Add any additional fields you need for the payload
+   string name = 1;
 }
 
 message PayloadResponse {
   // Add any additional fields you need for the payload
+  string message = 1;
 }
