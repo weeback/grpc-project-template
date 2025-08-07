@@ -44,7 +44,7 @@
    
    syntax = "proto3";
 
-   option go_package = "github/weeback/grpc-project-template/pb";
+   option go_package = "github.com/weeback/grpc-project-template/pb";
    
    package pb;
    
@@ -135,8 +135,8 @@
    import (
        "context"
    
-       "github/weeback/grpc-project-template/internal/entity/hello"
-       "github/weeback/grpc-project-template/pb"
+       "github.com/weeback/grpc-project-template/internal/entity/hello"
+       "github.com/weeback/grpc-project-template/pb"
    )
    
    func NewHelloServiceRepo() hello.Repository {
@@ -164,8 +164,8 @@
    import (
    "context"
    
-       "github/weeback/grpc-project-template/internal/entity/hello"
-       "github/weeback/grpc-project-template/pb"
+       "github.com/weeback/grpc-project-template/internal/entity/hello"
+       "github.com/weeback/grpc-project-template/pb"
    )
    
    func NewHelloServiceHandler(svc hello.Repository) *HelloServiceHandler {
@@ -223,9 +223,9 @@
       
       // === existing code ===
    
-      "github/weeback/grpc-project-template/internal/application/hello"
-      "github/weeback/grpc-project-template/internal/infrastructure/transport/grpc"
-      "github/weeback/grpc-project-template/pb"
+      "github.com/weeback/grpc-project-template/internal/application/hello"
+      "github.com/weeback/grpc-project-template/internal/infrastructure/transport/grpc"
+      "github.com/weeback/grpc-project-template/pb"
    
       googlegrpc "google.golang.org/grpc"
    )

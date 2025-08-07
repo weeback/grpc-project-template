@@ -1,4 +1,4 @@
-module github/weeback/grpc-project-template
+module github.com/weeback/grpc-project-template
 
 go 1.24
 

@@ -1,7 +1,7 @@
 package cloudflare
 
 import (
-	"github/weeback/grpc-project-template/internal/model"
+	"github.com/weeback/grpc-project-template/internal/model"
 	"context"
 )
 

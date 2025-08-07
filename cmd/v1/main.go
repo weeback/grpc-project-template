@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github/weeback/grpc-project-template/pkg"
+	"github.com/weeback/grpc-project-template/pkg"
 )
 
 func main() {

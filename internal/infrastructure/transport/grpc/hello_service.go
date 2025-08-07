@@ -3,11 +3,11 @@ package grpc
 import (
 	"context"
 
-	"github/weeback/grpc-project-template/internal/entity/hello"
-	"github/weeback/grpc-project-template/pkg/jwt"
+	"github.com/weeback/grpc-project-template/internal/entity/hello"
+	"github.com/weeback/grpc-project-template/pkg/jwt"
 
-	common "github/weeback/grpc-project-template/pb/common"
-	hellopb "github/weeback/grpc-project-template/pb/hello"
+	common "github.com/weeback/grpc-project-template/pb/common"
+	hellopb "github.com/weeback/grpc-project-template/pb/hello"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

@@ -3,7 +3,7 @@ package errors
 import (
 	"fmt"
 
-	commonpb "github/weeback/grpc-project-template/pb/common"
+	commonpb "github.com/weeback/grpc-project-template/pb/common"
 )
 
 func Errorf(code int, format string, a ...any) Error {

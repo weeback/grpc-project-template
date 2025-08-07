@@ -11,7 +11,7 @@ package hellopb
 
 import (
 	context "context"
-	common "github/weeback/grpc-project-template/pb/common"
+	common "github.com/weeback/grpc-project-template/pb/common"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

@@ -3,7 +3,7 @@ package hello
 import (
 	"fmt"
 
-	pb "github/weeback/grpc-project-template/pb/hello"
+	pb "github.com/weeback/grpc-project-template/pb/hello"
 )
 
 func validateSayRequest(request *pb.HelloRequest) error {

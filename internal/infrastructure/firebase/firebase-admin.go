@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	entity "github/weeback/grpc-project-template/internal/entity/firebase"
+	entity "github.com/weeback/grpc-project-template/internal/entity/firebase"
 
 	"firebase.google.com/go/v4/auth"
 	"firebase.google.com/go/v4/db"

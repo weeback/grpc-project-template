@@ -8,7 +8,7 @@
 SHELL = /usr/bin/env bash
 
 # Application settings
-PACKAGE_NAME := "github/weeback/grpc-project-template/pkg"
+PACKAGE_NAME := "github.com/weeback/grpc-project-template/pkg"
 MAIN_GO_FILE ?= cmd/v1/*.go
 
 # Build artifacts
@@ -76,7 +76,7 @@ help:
 init:
 	@echo "==> Initializing Go module..."
 	@rm -rf go.mod go.sum
-	@echo 'module github/weeback/grpc-project-template' > go.mod
+	@echo 'module github.com/weeback/grpc-project-template' > go.mod
 	@echo '' >> go.mod
 	@echo 'go 1.24' >> go.mod
 	@echo "==> Adding default replace directive..."

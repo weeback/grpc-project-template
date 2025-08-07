@@ -6,7 +6,7 @@ import "common/standard.proto";
 // this same proto/path/to/package/file.proto -> path.to.package
 package hello;
 
-option go_package = "github/weeback/grpc-project-template/pb/hello;hellopb";
+option go_package = "github.com/weeback/grpc-project-template/pb/hello;hellopb";
 
 
 service HelloService {

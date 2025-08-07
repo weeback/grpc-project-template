@@ -3,8 +3,8 @@ package hello
 import (
 	"context"
 
-	common "github/weeback/grpc-project-template/pb/common"
-	pb "github/weeback/grpc-project-template/pb/hello"
+	common "github.com/weeback/grpc-project-template/pb/common"
+	pb "github.com/weeback/grpc-project-template/pb/hello"
 )
 
 type Repository interface {
