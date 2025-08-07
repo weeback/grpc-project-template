@@ -170,6 +170,16 @@ func (c *Client) ID() string {
 	return c.id
 }
 
+func (c *Client) ChangeID(id string) error {
+	// Change the client's ID
+	if id == "" {
+		return fmt.Errorf("invalid ID provided for client %s, keeping the current ID", c.id)
+	}
+	c.id = id
+	log.Printf("Client ID changed to %s", c.id) // Log the ID change
+	return nil
+}
+
 func (c *Client) Close() error {
 	// Close the WebSocket connection and notify the hub
 	c.hub.unregister <- c

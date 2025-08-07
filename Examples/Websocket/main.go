@@ -38,6 +38,11 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to upgrade to WebSocket: %v", err)
 		return
 	}
+
+	if err := mh.ChangeID(net.QueryParams(r, "id", mh.ID())); err != nil {
+		log.Printf("Failed to change client ID: %v", err)
+	}
+
 	// Send welcome message to the new client
 	welcomeMessage, _ := json.Marshal(map[string]any{
 		"type":      "welcome",

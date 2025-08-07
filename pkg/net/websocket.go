@@ -13,6 +13,10 @@ type MessageChannel interface {
 	// ID returns the unique identifier for the WebSocket connection
 	ID() string
 
+	// ChangeID changes the client's ID to a new value.
+	// If the provided ID is empty, it returns an error and keeps the current ID.
+	ChangeID(id string) error
+
 	// SendMessage sends a message to the WebSocket connection
 	SendMessage(message []byte) error
 
