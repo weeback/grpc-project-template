@@ -9,7 +9,7 @@ SHELL = /usr/bin/env bash
 
 # Application settings
 PACKAGE_NAME := "github/weeback/grpc-project-template/pkg"
-MAIN_GO_FILE ?= cmd/v1/*.go
+MAIN_GO_FILE ?= Examples/Websocket/*.go
 
 # Build artifacts
 BIN_DIR := $(shell pwd)/bin
