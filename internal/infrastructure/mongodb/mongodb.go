@@ -3,8 +3,8 @@ package mongodb
 import (
 	"context"
 	"fmt"
-	"github/weeback/grpc-project-template/internal/entity/db"
-	"github/weeback/grpc-project-template/pkg/mongodb"
+	"github.com/weeback/grpc-project-template/internal/entity/db"
+	"github.com/weeback/grpc-project-template/pkg/mongodb"
 	"os"
 )
 

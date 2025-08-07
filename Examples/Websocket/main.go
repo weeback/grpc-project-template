@@ -2,13 +2,15 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
-	"github/weeback/grpc-project-template/pkg"
-	"github/weeback/grpc-project-template/pkg/net"
+	"github.com/weeback/grpc-project-template/pkg"
+	"github.com/weeback/grpc-project-template/pkg/net"
 )
 
 func main() {
@@ -37,8 +39,32 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Send welcome message to the new client
-	welcomeMessage := fmt.Sprintf("Welcome to the WebSocket server! You are connected as %s", mh.ID())
-	if err := mh.SendMessage([]byte(welcomeMessage)); err != nil {
+	welcomeMessage, _ := json.Marshal(map[string]any{
+		"type":      "welcome",
+		"message":   fmt.Sprintf("Welcome to the WebSocket server! You are connected as %s", mh.ID()),
+		"timestamp": time.Now().Format(time.RFC3339),
+	}) // fmt.Sprintf("Welcome to the WebSocket server! You are connected as %s\n", mh.ID())
+	if err := mh.SendMessage(welcomeMessage); err != nil {
+		log.Printf("Failed to send welcome message: %v", err)
+		return
+	}
+	welcomeMessage, _ = json.Marshal(map[string]any{
+		"type":      "message",
+		"from":      "admin",
+		"content":   "[!] Use /ALL <message> to broadcast a message to all clients",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+	if err := mh.SendMessage(welcomeMessage); err != nil {
+		log.Printf("Failed to send welcome message: %v", err)
+		return
+	}
+	welcomeMessage, _ = json.Marshal(map[string]any{
+		"type":      "message",
+		"from":      "admin",
+		"content":   "[!] Use /CID-<client_id> <message> to send a message to a specific client",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+	if err := mh.SendMessage(welcomeMessage); err != nil {
 		log.Printf("Failed to send welcome message: %v", err)
 		return
 	}
@@ -59,8 +85,17 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 
 		if strings.HasPrefix(string(message), "/ALL") || strings.HasPrefix(string(message), "/all") {
 			parts := bytes.SplitN(message, []byte(" "), 2) // Split the message into command and content
+			if len(parts) < 2 {
+				parts = [][]byte{[]byte("/ALL"), []byte("{{nothing}}")} // Default content if not provided
+			}
 			// Broadcast the received message to all clients
-			if err := ch.BroadcastMessage(fmt.Appendf([]byte("From "), "%s: %s", mh.ID(), parts[1])); err != nil {
+			msg, _ := json.Marshal(map[string]any{
+				"type":      "message",
+				"from":      mh.ID(),
+				"content":   string(parts[1]),
+				"timestamp": time.Now().Format(time.RFC3339),
+			})
+			if err := ch.BroadcastMessage(msg); err != nil {
 				log.Printf("Error broadcasting message from client %s: %v", mh.ID(), err)
 				break
 			}
@@ -71,12 +106,24 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(string(message), "/CID-") {
 			parts := bytes.SplitN(message, []byte(" "), 2) // Split the message into command and content
 			receive := strings.Replace(string(parts[0]), "/", "", 1)
-			content := bytes.Replace(message, fmt.Appendf(parts[0], " "), []byte{}, 1)
+			content := bytes.Replace(message, parts[0], []byte{}, 1)
+			content = bytes.Replace(content, []byte(" "), []byte{}, 1)
+			if len(content) == 0 {
+				content = []byte("{{nothing}}")
+			}
 			log.Printf("From %s to %s: %s", mh.ID(), receive, string(content))
 			// Send the message to the specified client
-			if err := ch.SendTo(receive, fmt.Appendf([]byte("From "), "%s: %s", mh.ID(), content)); err != nil {
+			msg, _ := json.Marshal(map[string]any{
+				"type":      "message",
+				"from":      mh.ID(),
+				"content":   string(content),
+				"timestamp": time.Now().Format(time.RFC3339),
+			})
+			if err := ch.SendTo(receive, msg); err != nil {
 				log.Printf("Error sending message to client %s: %v", receive, err)
-				break
+
+				// Feedback to the sender
+				message = fmt.Appendf(message, " - Failed to send message to client %s because receiver is not connected (detail: %s)", receive, err.Error())
 			}
 		}
 

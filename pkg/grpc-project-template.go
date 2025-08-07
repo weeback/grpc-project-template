@@ -7,12 +7,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github/weeback/grpc-project-template/pkg/net"
+	"github.com/weeback/grpc-project-template/pkg/net"
 )
 
 const (
-	OriginalURL = "https://github/weeback/grpc-project-template.git"
-	LicenseURL  = "https://github/weeback/grpc-project-template/blob/main/LICENSE"
+	OriginalURL = "https://github.com/weeback/grpc-project-template.git"
+	LicenseURL  = "https://github.com/weeback/grpc-project-template/blob/main/LICENSE"
 
 	Author  = "Bankaool, S.A., Institución de Banca Múltiple"
 	License = "MIT"
@@ -58,7 +58,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`
 )
 
-// On import package 'github/weeback/grpc-project-template' to use, this function will be called.
+// On import package 'github.com/weeback/grpc-project-template' to use, this function will be called.
 func init() {
 	if BuildTag == "" {
 		Version = fmt.Sprintf("%s | Branch: %s - Commit: %s", Version, BuildBranch, BuildCommit)
@@ -142,7 +142,7 @@ func PermissionDeniedHandler() http.Handler {
 	<p>If you believe this is an error, please contact the system administrator.</p>
 	
 	
-	<p>For more information, please refer to the <a href="https://github/weeback/grpc-project-template/blob/main/LICENSE" target="_blank">License</a>.</p>
+	<p>For more information, please refer to the <a href="https://github.com/weeback/grpc-project-template/blob/main/LICENSE" target="_blank">License</a>.</p>
 	
 </body>
 </html>`

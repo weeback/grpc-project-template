@@ -6,18 +6,18 @@ import (
 	"os"
 	"time"
 
-	"github/weeback/grpc-project-template/internal/application/hello"
-	"github/weeback/grpc-project-template/internal/config"
-	"github/weeback/grpc-project-template/internal/infrastructure/mongodb"
-	"github/weeback/grpc-project-template/internal/infrastructure/transport/grpc"
-	"github/weeback/grpc-project-template/internal/infrastructure/transport/http"
-	"github/weeback/grpc-project-template/pkg"
-	"github/weeback/grpc-project-template/pkg/net"
+	"github.com/weeback/grpc-project-template/internal/application/hello"
+	"github.com/weeback/grpc-project-template/internal/config"
+	"github.com/weeback/grpc-project-template/internal/infrastructure/mongodb"
+	"github.com/weeback/grpc-project-template/internal/infrastructure/transport/grpc"
+	"github.com/weeback/grpc-project-template/internal/infrastructure/transport/http"
+	"github.com/weeback/grpc-project-template/pkg"
+	"github.com/weeback/grpc-project-template/pkg/net"
 
-	// Import unuse package 'github/weeback/grpc-project-template/pkg' with tag '_' to execute init() function of global package.
-	//	_ "github/weeback/grpc-project-template/pkg"
+	// Import unuse package 'github.com/weeback/grpc-project-template/pkg' with tag '_' to execute init() function of global package.
+	//	_ "github.com/weeback/grpc-project-template/pkg"
 
-	pb "github/weeback/grpc-project-template/pb/hello"
+	pb "github.com/weeback/grpc-project-template/pb/hello"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"

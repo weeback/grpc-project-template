@@ -10,7 +10,7 @@
 package hellopb
 
 import (
-	common "github/weeback/grpc-project-template/pb/common"
+	common "github.com/weeback/grpc-project-template/pb/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -219,7 +219,7 @@ const file_hello_hello_proto_rawDesc = "" +
 	"\amessage\x18\x01 \x01(\tR\amessage2\x86\x01\n" +
 	"\fHelloService\x122\n" +
 	"\bSayHello\x12\x13.hello.HelloRequest\x1a\x11.hello.HelloReply\x12B\n" +
-	"\x13UseStandardResponse\x12\x11.common.ClientJwt\x1a\x18.common.StandardResponseB7Z5github/weeback/grpc-project-template/pb/hello;hellopbb\x06proto3"
+	"\x13UseStandardResponse\x12\x11.common.ClientJwt\x1a\x18.common.StandardResponseB;Z9github.com/weeback/grpc-project-template/pb/hello;hellopbb\x06proto3"
 
 var (
 	file_hello_hello_proto_rawDescOnce sync.Once

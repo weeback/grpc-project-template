@@ -6,7 +6,7 @@ import "google/protobuf/any.proto";
 // this same proto/path/to/package/file.proto -> path.to.package
 package common;
 
-option go_package = "github/weeback/grpc-project-template/pb/common;commonpb";
+option go_package = "github.com/weeback/grpc-project-template/pb/common;commonpb";
 
 // Request message for JWT-based operations (shared by multiple functions)
 message ClientJwt {

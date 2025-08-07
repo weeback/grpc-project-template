@@ -3,8 +3,8 @@ package mock
 import (
 	"context"
 
-	"github/weeback/grpc-project-template/internal/entity/cloudflare"
-	"github/weeback/grpc-project-template/internal/model"
+	"github.com/weeback/grpc-project-template/internal/entity/cloudflare"
+	"github.com/weeback/grpc-project-template/internal/model"
 )
 
 var CaptchaService cloudflare.CaptchaService = &captchaServiceMock{}

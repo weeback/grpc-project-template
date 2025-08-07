@@ -9,13 +9,13 @@ import (
 	"google.golang.org/protobuf/proto"
 	"net/http"
 
-	"github/weeback/grpc-project-template/internal/entity/hello"
-	"github/weeback/grpc-project-template/pkg"
-	"github/weeback/grpc-project-template/pkg/jwt"
-	"github/weeback/grpc-project-template/pkg/net"
+	"github.com/weeback/grpc-project-template/internal/entity/hello"
+	"github.com/weeback/grpc-project-template/pkg"
+	"github.com/weeback/grpc-project-template/pkg/jwt"
+	"github.com/weeback/grpc-project-template/pkg/net"
 
-	common "github/weeback/grpc-project-template/pb/common"
-	hellopb "github/weeback/grpc-project-template/pb/hello"
+	common "github.com/weeback/grpc-project-template/pb/common"
+	hellopb "github.com/weeback/grpc-project-template/pb/hello"
 )
 
 func NewHelloServiceHandler(svc hello.Repository) *HelloServiceHandler {
