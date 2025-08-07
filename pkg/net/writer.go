@@ -1,6 +1,10 @@
 package net
 
-import "net/http"
+import (
+	"bufio"
+	"net"
+	"net/http"
+)
 
 type ResponseWriter struct {
 	http.ResponseWriter
@@ -26,6 +30,14 @@ func (rw *ResponseWriter) StatusCode() int {
 
 func (rw *ResponseWriter) Status() string {
 	return http.StatusText(rw.status)
+}
+
+// Hijack implements the http.Hijacker interface for WebSocket support
+func (rw *ResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := rw.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, http.ErrNotSupported
 }
 
 func NewHttpWriter(w http.ResponseWriter) *ResponseWriter {
