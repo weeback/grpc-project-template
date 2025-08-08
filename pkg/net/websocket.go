@@ -20,6 +20,9 @@ type MessageChannel interface {
 	// SendMessage sends a message to the WebSocket connection
 	SendMessage(message []byte) error
 
+	// SendBinaryMessage sends a binary message to the WebSocket connection
+	SendBinaryMessage(message []byte) error
+
 	// ReceiveMessage returns the next message received from the WebSocket connection.
 	//
 	// Usage:
@@ -40,11 +43,14 @@ type MessageChannel interface {
 
 type HubChannel interface {
 
-	// SendTo sends a message to a specific client identified by receiveId
-	SendTo(receiveId string, message []byte) error
+	// SendTo sends a message to a specific client identified by receiveId.
+	// It supports both text (1) and binary messages (2).
+	SendTo(receiveId string, messageType int, message []byte) error
 
 	// BroadcastMessage sends a message to all connected clients
 	BroadcastMessage(message []byte) error
+
+	BroadcastBinary(b []byte) error
 }
 
 // UpgradeToWebSocket upgrades the HTTP connection to a WebSocket connection.

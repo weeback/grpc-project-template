@@ -124,7 +124,7 @@ func serveWS(w http.ResponseWriter, r *http.Request) {
 				"content":   string(content),
 				"timestamp": time.Now().Format(time.RFC3339),
 			})
-			if err := ch.SendTo(receive, msg); err != nil {
+			if err := ch.SendTo(receive, 1, msg); err != nil {
 				log.Printf("Error sending message to client %s: %v", receive, err)
 
 				// Feedback to the sender

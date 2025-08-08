@@ -1,11 +1,13 @@
 package net
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
 )
@@ -46,11 +48,12 @@ func NewHub() *Hub {
 
 	// Initialize the hub with channels and client map
 	hub := &Hub{
-		broadcast:  make(chan []byte, 256),
-		register:   make(chan *Client, 256),
-		unregister: make(chan *Client, 256),
-		clients:    make(map[*Client]bool),
-		once:       sync.Once{}, // No pending clients initially
+		broadcast:    make(chan []byte, 256),
+		broadcastBin: make(chan []byte, 256),
+		register:     make(chan *Client, 256),
+		unregister:   make(chan *Client, 256),
+		clients:      make(map[*Client]bool),
+		once:         sync.Once{}, // No pending clients initially
 	}
 
 	// Start the hub in a goroutine
@@ -60,11 +63,12 @@ func NewHub() *Hub {
 
 // Hub maintains the set of active clients and broadcasts messages to them
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
-	once       sync.Once
+	clients      map[*Client]bool
+	broadcast    chan []byte
+	broadcastBin chan []byte
+	register     chan *Client
+	unregister   chan *Client
+	once         sync.Once
 }
 
 // Run starts the hub and handles client registration/unregistration and broadcasting
@@ -75,16 +79,6 @@ func (h *Hub) run() {
 			case client := <-h.register:
 				h.clients[client] = true
 				log.Printf("Client %s connected. Total clients: %d", client.id, len(h.clients))
-
-				// Send welcome message to new client
-				// welcome := fmt.Sprintf(`{"type":"welcome","message":"Welcome client %s!","timestamp":"%s"}`,
-				// 	client.id, time.Now().Format(time.RFC3339))
-				// select {
-				// case client.send <- []byte(welcome):
-				// default:
-				// 	close(client.send)
-				// 	delete(h.clients, client)
-				// }
 
 			case client := <-h.unregister:
 				if _, ok := h.clients[client]; ok {
@@ -99,11 +93,15 @@ func (h *Hub) run() {
 			case message := <-h.broadcast:
 				// Broadcast message to all connected clients
 				for client := range h.clients {
-					select {
-					case client.send <- message:
-					default:
-						close(client.send)
-						delete(h.clients, client)
+					if err := client.write(websocket.TextMessage, message); err != nil {
+						log.Printf("Error broadcast sending text message to client %s: %v", client.id, err)
+					}
+				}
+			case bin := <-h.broadcastBin:
+				// Broadcast binary message to all connected clients
+				for client := range h.clients {
+					if err := client.write(websocket.BinaryMessage, bin); err != nil {
+						log.Printf("Error broadcast sending binary message to client %s: %v", client.id, err)
 					}
 				}
 			}
@@ -137,10 +135,17 @@ func (h *Hub) registerClient(conn *websocket.Conn, id string) *Client {
 	return client
 }
 
-func (h *Hub) SendTo(receiveId string, message []byte) error {
+func (h *Hub) SendTo(receiveId string, messageType int, message []byte) error {
 	for client := range h.clients {
 		if client.id == receiveId {
-			return client.SendMessage(message)
+			switch messageType {
+			case websocket.TextMessage:
+				return client.SendMessage(message)
+			case websocket.BinaryMessage:
+				return client.SendBinaryMessage(message)
+			default:
+				return fmt.Errorf("unsupported message type: %d, please use websocket.TextMessage (1) or websocket.BinaryMessage (2)", messageType)
+			}
 		}
 	}
 	return fmt.Errorf("client %s not found", receiveId)
@@ -149,6 +154,18 @@ func (h *Hub) SendTo(receiveId string, message []byte) error {
 func (h *Hub) BroadcastMessage(message []byte) error {
 	select {
 	case h.broadcast <- message:
+		return nil
+	case <-time.After(writeTimeout):
+		return fmt.Errorf("failed to broadcast message: write timeout")
+	default:
+		// Notify hub to unregister the client
+		return fmt.Errorf("failed to broadcast message: closing connection")
+	}
+}
+
+func (h *Hub) BroadcastBinary(b []byte) error {
+	select {
+	case h.broadcastBin <- b:
 		return nil
 	case <-time.After(writeTimeout):
 		return fmt.Errorf("failed to broadcast message: write timeout")
@@ -191,6 +208,35 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) SendMessage(message []byte) error {
+	return c.write(websocket.TextMessage, message)
+}
+
+func (c *Client) SendBinaryMessage(message []byte) error {
+	return c.write(websocket.BinaryMessage, message)
+}
+
+func (c *Client) ReceiveMessage() ([]byte, error) {
+	message, ok := <-c.recv
+	if !ok {
+		return nil, fmt.Errorf("client %s disconnected", c.id)
+	}
+	return message, nil
+}
+
+func (c *Client) write(messageType int, data []byte) error {
+	var message []byte
+	switch messageType {
+	case websocket.TextMessage:
+		if !utf8.Valid(data) {
+			return fmt.Errorf("invalid UTF-8 data for text message")
+		}
+		message = append([]byte{websocket.TextMessage, 0xFF}, data...)
+	case websocket.BinaryMessage:
+		// Binary messages can contain any data, no validation needed
+		message = append([]byte{websocket.BinaryMessage, 0xFF}, data...)
+	default:
+		return fmt.Errorf("unsupported message type: %d", messageType)
+	}
 	select {
 	case c.send <- message:
 		return nil
@@ -202,46 +248,6 @@ func (c *Client) SendMessage(message []byte) error {
 		return fmt.Errorf("failed to send message to client %s, closing connection", c.id)
 	}
 }
-
-func (c *Client) ReceiveMessage() ([]byte, error) {
-	message, ok := <-c.recv
-	if !ok {
-		return nil, fmt.Errorf("client %s disconnected", c.id)
-	}
-	return message, nil
-}
-
-// func (c *Client) SendTo(receiveId string, message []byte) error {
-// 	// Find the target client by ID
-// 	for receive := range c.hub.clients {
-// 		if receive.id == receiveId {
-// 			select {
-// 			case receive.send <- message:
-// 				return nil
-// 			case <-time.After(writeTimeout):
-// 				return fmt.Errorf("failed to send message to client %s, connection timeout", receive.id)
-// 			default:
-// 				// Notify hub to unregister the client
-// 				receive.hub.unregister <- receive
-// 				return fmt.Errorf("failed to send message to client %s, closing connection", receive.id)
-// 			}
-// 		}
-// 	}
-// 	return fmt.Errorf("client %s not found", receiveId)
-// }
-
-// func (c *Client) BroadcastMessage(message []byte) error {
-// 	select {
-// 	case c.hub.broadcast <- message:
-// 		return nil
-// 	case <-time.After(writeTimeout):
-// 		return fmt.Errorf("failed to broadcast message from client %s, closing connection", c.id)
-// 	default:
-// 		// Notify hub to unregister the client
-// 		c.hub.unregister <- c
-// 		return fmt.Errorf("failed to broadcast message from client %s, closing connection", c.id)
-// 	}
-// }
 
 // readPump handles reading messages from the WebSocket connection
 func (c *Client) readPump() {
@@ -279,11 +285,6 @@ func (c *Client) readPump() {
 			close(c.recv)
 			delete(c.hub.clients, c)
 		}
-
-		// // Echo the message back to all clients with sender info
-		// broadcastMsg := fmt.Sprintf(`{"type":"message","from":"%s","content":"%s","timestamp":"%s"}`,
-		// 	c.id, string(message), time.Now().Format(time.RFC3339))
-		// c.hub.broadcast <- []byte(broadcastMsg)
 	}
 }
 
@@ -296,38 +297,50 @@ func (c *Client) writePump() {
 	}()
 
 	for {
+		log.Printf("Writing to client %s ... ", c.id)
 		select {
 		case message, ok := <-c.send:
+			if len(message) == 0 {
+				log.Printf("No message to send to client %s", c.id)
+				continue
+			}
+
 			c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			w.Write(message)
+			// Determine message type: binary if contains non-UTF8, text otherwise
+			actualMessage := []byte{}
+			messageType := websocket.TextMessage
 
-			// This block is commented out to avoid sending queued messages.
-			// It only available if you want to implement message queuing.
-			// On application level, you can manage message queuing if needed.
-			// This can be done by buffering messages in the `send` channel.
-			//
-			// Add queued messages to the current message
-			// n := len(c.send)
-			// for i := 0; i < n; i++ {
-			// 	w.Write([]byte{'\n'})
-			// 	w.Write(<-c.send)
-			// }
-
-			if err := w.Close(); err != nil {
-				return
+			if len(message) > 2 && message[1] == 0xFF {
+				switch message[0] {
+				case websocket.TextMessage:
+					messageType = websocket.TextMessage
+					actualMessage = message[2:] // Remove the prefix
+				case websocket.BinaryMessage:
+					messageType = websocket.BinaryMessage
+					actualMessage = message[2:] // Remove the prefix
+				default:
+					log.Printf("Unknown message type %d, treating as text", message[0])
+					messageType = websocket.TextMessage
+					actualMessage = message[1:] // Remove the prefix
+				}
 			}
 
+			if err := c.conn.WriteMessage(messageType, actualMessage); err != nil {
+				log.Printf("Failed to write message to client %s: %v", c.id, err)
+			}
+
+			// Log the message sent to the client
+			txt := string(actualMessage)
+			if messageType == websocket.BinaryMessage {
+				txt = fmt.Sprintf("Binary message of length %d: %s", len(actualMessage), base64.StdEncoding.EncodeToString(actualMessage))
+			}
 			// Process write message
-			log.Printf("Sent to client %s: %s", c.id, string(message))
+			log.Printf("Sent to client %s: %s", c.id, txt)
 
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
