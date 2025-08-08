@@ -288,12 +288,15 @@ func (c *Client) writePump() {
 	for {
 		select {
 		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
+			if len(message) == 0 {
+				continue // Skip empty messages
+			}
 
+			c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
