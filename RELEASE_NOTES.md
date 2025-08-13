@@ -1,5 +1,14 @@
 # Release Notes
 
+## [v0.2.1] - 2025-08-13
+
+### 🔧 Http Logger interceptor Improvements
+
+- **http interceptor**: Merge feature branches for logger bugfixes ([313e4cf](https://github.com/weeback/grpc-project-template/commit/313e4cf45382196cb9d5d9559fe44e73c7b97cf0))
+  - Add logger interceptor to CORS middleware for enhanced request logging
+
+---
+
 ## [v0.2.0] - 2025-08-13
 
 ### ✨ New Features
