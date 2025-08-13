@@ -33,6 +33,7 @@ flowchart TB
     %% Application Layer (Business Logic)
     subgraph app ["💼 Application Layer"]
         HelloController["application/hello/controller.go<br/>🎮 Business Logic"]
+        HelloLogging["application/hello/logging.go<br/>📝 Logging Decorator"]
         HelloValidation["application/hello/validation.go<br/>✅ Input Validation"]
         HelloUtils["application/hello/utils.go<br/>🛠️ Helper Functions"]
     end
@@ -85,6 +86,7 @@ flowchart TB
         PkgNet["pkg/net/<br/>🌐 Network Utils"]
         PkgJwt["pkg/jwt/<br/>🔐 JWT Utils"] 
         PkgMongo["pkg/mongodb/<br/>🍃 MongoDB Utils"]
+        PkgLogger["pkg/logger/<br/>📝 Logger Utils"]
         PkgMain["pkg/grpc-project-template.go<br/>📋 Main Package"]
     end
 
@@ -107,16 +109,20 @@ flowchart TB
 
     %% Application Layer Dependencies
     HelloController -->|"implements"| HelloRepo
-    HelloController --> HelloValidation
-    HelloController --> HelloUtils
+        HelloController --> HelloLogging
+        HelloLogging --> HelloRepo
+        HelloController --> HelloValidation
+        HelloController --> HelloUtils
     HelloController --> DbEntity
     HelloController --> ProtobufHello
     HelloController --> ProtobufCommon
 
     %% Transport Layer Dependencies
     GrpcHandler -->|"uses"| HelloRepo
+        GrpcHandler --> PkgLogger
     GrpcHandler --> ProtobufHello
     HttpHandler -->|"uses"| HelloRepo
+        HttpHandler --> PkgLogger
     HttpHandler --> ProtobufHello
     HttpHandler --> HttpModel
     HttpHandler --> PkgNet
