@@ -5,6 +5,10 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/weeback/grpc-project-template/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -40,9 +44,9 @@ func printLogApi(wc *ResponseWriter, r *http.Request, t time.Time) {
 		userAgent = r.Header.Get(headerUserAgent)
 		requestId = r.Header.Get(xApiRequestId)
 		clientId  = r.Header.Get(xApiClientId)
-		more      string
+	// more      string
 	)
-	// Add the request-Id to log
+	// Add the request-Id to entry
 	if requestId == "" {
 		requestId = "N/A"
 	}
@@ -56,17 +60,33 @@ func printLogApi(wc *ResponseWriter, r *http.Request, t time.Time) {
 		clientId = "N/A"
 	}
 	//
-	more = fmt.Sprintf("%s\t- - %s - %s - RequestID=%s - ClientID=%s", more, origin, userAgent, requestId, clientId)
+	// more = fmt.Sprintf("%s\t- - %s - %s - RequestID=%s - ClientID=%s", more, origin, userAgent, requestId, clientId)
 
 	// Collect response headers
 	cH := wc.Header().Clone()
 
 	// Check if there is an error message
-	if msg := cH.Get(xApiMoreError); msg != "" {
-		more = fmt.Sprintf("%s > %s", more, msg)
-	}
+	//if msg := cH.Get(xApiMoreError); msg != "" {
+	//more = fmt.Sprintf("%s > %s", more, msg)
+	//}
+
+	logger.NewEntry().Info("API request",
+		zap.Time("timestamp", time.Now()),
+		zap.String("hostname", hostname),
+		zap.String("remote_addr", r.RemoteAddr),
+		zap.String("method", r.Method),
+		zap.String("url", r.URL.String()),
+		zap.String("status", wc.Status()),
+		zap.Int("status_code", wc.StatusCode()),
+		zap.String("duration", time.Since(t).String()),
+		zap.String("client_id", clientId),
+		zap.String("request_id", requestId),
+		zap.String("origin", origin),
+		zap.String("user_agent", userAgent),
+		zap.String("x_more_error", cH.Get(xApiMoreError)),
+	)
 
 	// Log the request
-	fmt.Printf("%s - %s | %20s --> %d %s - - %6s - %s - %s%s\n", time.Now().Format(time.DateTime), hostname,
-		r.RemoteAddr, wc.StatusCode(), wc.Status(), r.Method, r.URL.String(), time.Since(t).String(), more)
+	// fmt.Printf("%s - %s | %20s --> %d %s - - %6s - %s - %s%s\n", time.Now().Format(time.DateTime), hostname,
+	// r.RemoteAddr, wc.StatusCode(), wc.Status(), r.Method, r.URL.String(), time.Since(t).String(), more)
 }

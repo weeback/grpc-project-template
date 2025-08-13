@@ -14,8 +14,10 @@ import (
 )
 
 func NewHelloServiceRepo(exDb db.ExampleDB) hello.Repository {
-	return &controller{
-		exDb: exDb,
+	return &logging{
+		next: &controller{
+			exDb: exDb,
+		},
 	}
 }
 
