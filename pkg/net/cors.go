@@ -2,9 +2,12 @@ package net
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"net/http"
+	"github.com/weeback/grpc-project-template/pkg/logger"
+	"go.uber.org/zap"
 )
 
 func Middleware(ro *mux.Router, enableCORS bool, middlewareFunc ...http.HandlerFunc) http.Handler {
@@ -35,9 +38,22 @@ func Middleware(ro *mux.Router, enableCORS bool, middlewareFunc ...http.HandlerF
 			h.ServeHTTP(w, r)
 		})
 	}
-
+	// Logger interceptor
+	loggerIntecepter := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Create logger with request context
+			reqLogger := logger.NewEntry().With(
+				zap.String("http_method", r.Method),
+				zap.String("http_path", r.URL.Path),
+				zap.String("req_id", r.Header.Get(xApiRequestId)),
+			)
+			// Use the context with the logger
+			rc := r.WithContext(logger.SetLoggerToContext(r.Context(), reqLogger))
+			h.ServeHTTP(w, rc)
+		})
+	}
 	//
-	ro.Use(corsHandler, middlewareHandler)
+	ro.Use(corsHandler, middlewareHandler, loggerIntecepter)
 
 	// Walk through all the registered routes
 	err := ro.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
