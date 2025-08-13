@@ -1,5 +1,52 @@
 # Release Notes
 
+## [v0.2.0] - 2025-08-13
+
+### ✨ New Features
+
+- **logging**: Implement structured logging for HelloService and add logger context management ([de74656](https://github.com/weeback/grpc-project-template/commit/de74656d5c3d59c0d3071f86cf4fc26c16eebee7))
+  - Introduce `pkg/logger` package for centralized logging utilities
+  - Add context-based logger management for request tracing
+  - Improve log output format for better debugging and monitoring
+
+### 🐛 Bug Fixes & Improvements
+
+- Merge feature branches for logger and websocket bugfixes ([6c45694](https://github.com/weeback/grpc-project-template/commit/6c4569426b86f9976645850e5ea32e43a283a390))
+
+---
+
+## [v0.1.3] - 2025-08-13
+
+### 🐛 WebSocket Bug Fixes
+
+- **websocket**: Merge websocket-hijack bugfixes ([8c1ca77](https://github.com/weeback/grpc-project-template/commit/8c1ca7790bb0ea1629b119481ea057a25357c977))
+  - Fix empty message handling in writePump
+  - Optimize WebSocket write deadline management
+  - Improve message type detection and handling
+
+### 🔧 WebSocket Improvements
+
+- **websocket**: Enhance message handling with binary support and update SendTo method ([0a774c1](https://github.com/weeback/grpc-project-template/commit/0a774c171bfde6cbe0d27252843051d25b415bf8))
+- **client**: Skip sending empty messages in writePump ([9c4f719](https://github.com/weeback/grpc-project-template/commit/9c4f719b7f69386ca012e2b90f422ce7695327f4))
+
+---
+
+## [v0.1.2] - 2025-08-07
+
+### 🐛 Hijack & Connection Fixes
+
+- **websocket**: Merge websocket-hijack bugfixes ([aeceec0](https://github.com/weeback/grpc-project-template/commit/aeceec08d3538e6a683640aef90d7094b73f76d2))
+  - Add Hijack method for WebSocket support in ResponseWriter
+  - Enable HTTP connection hijacking for WebSocket upgrades
+  - Improve WebSocket protocol compatibility
+
+### 🔧 Client Management Improvements
+
+- **websocket**: Add ChangeID method to Client for dynamic client ID management ([01a466c](https://github.com/weeback/grpc-project-template/commit/01a466cd17e77ce454363467ad4f2e9508fb26db))
+- **writer**: Add Hijack method for WebSocket support ([a29ae6a](https://github.com/weeback/grpc-project-template/commit/a29ae6ae8b41f6e5981ca4e4e6e193769d5cf135))
+
+---
+
 ## [v0.1.1] - 2025-08-07
 
 ### 🐛 Bug Fixes
@@ -16,7 +63,7 @@
 
 ## [v0.1.0] - 2025-08-07
 
-### ✨ New Features
+### ✨ WebSocket Features
 
 - **websocket**: Implement WebSocket server with client management and messaging ([e22d439](https://github.com/weeback/grpc-project-template/commit/e22d439f78f60f5d8976db70ba24c2f4fb6f41ae))
   - Add WebSocket server functionality
@@ -24,7 +71,7 @@
   - Add real-time messaging capabilities
   - Enhance the project with bidirectional communication support
 
-### � Import Fixes
+### 🔧 Import Fixes
 
 - **import paths**: Update import paths to use the correct GitHub domain ([1f8d135](https://github.com/weeback/grpc-project-template/commit/1f8d135ce81fb084c33fbb1bc38e832be448c77e))
 
@@ -89,15 +136,30 @@
 
 ## Migration Guide
 
-### From v0.0.1 to v0.1.0
+### From v0.1.3 to v0.2.0
 
-- **WebSocket Support**: New WebSocket functionality is now available. Update your client applications to leverage real-time communication features.
-- **Import Paths**: Ensure all import paths are updated to use the correct GitHub domain.
+- **Structured Logging**: New logging system is now available. The changes are backward compatible.
+- **No Breaking Changes**: This is a minor release with new features. Safe to upgrade.
+
+### From v0.1.2 to v0.1.3
+
+- **WebSocket Improvements**: Enhanced WebSocket functionality with better message handling.
+- **No Breaking Changes**: This is a patch release with bug fixes and improvements.
+
+### From v0.1.1 to v0.1.2
+
+- **WebSocket Enhancements**: New WebSocket features including Hijack method and dynamic client ID management.
+- **No Breaking Changes**: This is a patch release with new features and bug fixes.
 
 ### From v0.1.0 to v0.1.1
 
 - **No Breaking Changes**: This is a patch release with only bug fixes.
 - **Import Path Fixes**: All import paths have been corrected - no action required from users.
+
+### From v0.0.1 to v0.1.0
+
+- **WebSocket Support**: New WebSocket functionality is now available. Update your client applications to leverage real-time communication features.
+- **Import Paths**: Ensure all import paths are updated to use the correct GitHub domain.
 
 ## Contributors
 
