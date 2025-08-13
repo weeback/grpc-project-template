@@ -2,11 +2,12 @@ package net
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/weeback/grpc-project-template/pkg/logger"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -52,7 +53,9 @@ func AllowServiceAccounts(inst *grpc.Server, expectedServiceAccounts []string) h
 }
 
 // UnaryServerLoggingInterceptor creates a server interceptor for logging gRPC requests
-func UnaryServerLoggingInterceptor(logger *zap.Logger) grpc.UnaryServerInterceptor {
+
+// UnaryServerLoggingInterceptor creates a server interceptor for logging gRPC requests
+func UnaryServerLoggingInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		startTime := time.Now()
 
@@ -63,11 +66,15 @@ func UnaryServerLoggingInterceptor(logger *zap.Logger) grpc.UnaryServerIntercept
 		}
 
 		// Create logger with request context
-		reqLogger := logger.With(
+		reqLogger := logger.NewEntry().With(
 			zap.String("method", info.FullMethod),
 			zap.String("req_id", reqID),
 		)
 
+		// Use the context with the logger
+		ctx = logger.SetLoggerToContext(ctx, reqLogger)
+
+		// Log the start of the request
 		reqLogger.Info("gRPC request started",
 			zap.Any("request", req),
 			zap.Time("start_time", startTime),
@@ -95,13 +102,23 @@ func UnaryServerLoggingInterceptor(logger *zap.Logger) grpc.UnaryServerIntercept
 }
 
 func clientAuthorizationCheck(ctx context.Context, expectedServiceAccounts []string) error {
+	if len(expectedServiceAccounts) == 0 {
+		return nil // No service accounts to check against, allow all
+	}
 	authInfo, err := alts.AuthInfoFromContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.PermissionDenied, "The context is not an ALTS-compatible context: %v", err)
 	}
-	fmt.Printf("authInfo: %+v\n", authInfo)
+	entry := logger.GetLoggerFromContext(ctx)
+	entry.Debug("ALTS AuthInfo",
+		zap.String("PeerServiceAccount", authInfo.PeerServiceAccount()),
+		zap.String("LocalServiceAccount", authInfo.LocalServiceAccount()),
+		zap.String("ApplicationProtocol", authInfo.ApplicationProtocol()),
+		zap.String("RecordProtocol", authInfo.RecordProtocol()))
+
 	peer := authInfo.PeerServiceAccount()
-	fmt.Printf("peer: %+v\n", peer)
+	entry.Debug("ALTS AuthInfo", zap.String("peer", peer))
+
 	for _, sa := range expectedServiceAccounts {
 		if strings.EqualFold(peer, sa) {
 			return nil

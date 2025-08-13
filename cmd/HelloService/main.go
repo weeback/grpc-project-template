@@ -20,7 +20,6 @@ import (
 	pb "github.com/weeback/grpc-project-template/pb/hello"
 
 	"github.com/gorilla/mux"
-	"go.uber.org/zap"
 
 	googlegrpc "google.golang.org/grpc"
 	googlealts "google.golang.org/grpc/credentials/alts"
@@ -30,33 +29,9 @@ var (
 	mongoURL = config.GetMongoURI()
 	// captchaSecretKey = config.GetCloudflareTurnstileCredentials()
 
-	logger *zap.Logger
 )
 
 func init() {
-	//
-	// Initialize the logger
-	switch config.GetDeploymentEnvironment() {
-	case config.Production:
-		// Initialize logger
-		prod, err := zap.NewProduction()
-		if err != nil {
-			logger = zap.NewExample()
-			logger.Debug("failed to initialize production logger", zap.Error(err))
-		} else {
-			logger = prod
-		}
-
-	case config.Development:
-		// Initialize logger
-		dev, err := zap.NewDevelopment()
-		if err != nil {
-			logger = zap.NewExample()
-			logger.Debug("failed to initialize production logger", zap.Error(err))
-		} else {
-			logger = dev
-		}
-	}
 
 	// Load the configuration from the JSON file; If it not error,
 	// you can use config.GetOptionFirebaseAdmin function to get the Firebase admin options.
@@ -69,16 +44,7 @@ func init() {
 func main() {
 	// Initialize the context
 	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
-
-	defer func(ctxCancelFunc context.CancelFunc, logger *zap.Logger) {
-		ctxCancelFunc()
-		if logger != nil {
-			if err := logger.Sync(); err != nil {
-				fmt.Printf("failed to sync logger: %v\n", err)
-				os.Exit(1)
-			}
-		}
-	}(cancel, logger)
+	defer cancel()
 
 	// Init connection
 	databaseInter := mongodb.NewMongoDB(ctx, mongoURL)
