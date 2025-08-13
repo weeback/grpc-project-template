@@ -300,20 +300,20 @@ func (c *Client) writePump() {
 		log.Printf("Writing to client %s ... ", c.id)
 		select {
 		case message, ok := <-c.send:
+			if !ok {
+				c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
 			if len(message) == 0 {
 				log.Printf("No message to send to client %s", c.id)
 				continue
 			}
 
-			c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
-			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
 			// Determine message type: binary if contains non-UTF8, text otherwise
 			actualMessage := []byte{}
 			messageType := websocket.TextMessage
+			c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 
 			if len(message) > 2 && message[1] == 0xFF {
 				switch message[0] {
