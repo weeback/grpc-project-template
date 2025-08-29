@@ -12,9 +12,10 @@ const (
 	corsOriginHeader           string = "Origin"
 	corsVaryHeader             string = "Vary"
 
-	headerOrigin      string = "Origin"
-	headerUserAgent   string = "User-Agent"
-	headerContentType string = "Content-Type"
+	headerOrigin        string = "Origin"
+	headerUserAgent     string = "User-Agent"
+	headerContentType   string = "Content-Type"
+	headerAuthorization string = "Authorization"
 
 	xApiClientId       string = "X-Client-Id"
 	xApiRequestId      string = "X-Request-Id"

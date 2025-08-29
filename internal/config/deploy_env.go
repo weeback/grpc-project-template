@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 const (
 	// deploymentEnvironment is the default deployment environment.
@@ -69,8 +72,22 @@ func GetMongoURI() string {
 }
 
 func GetPreSharedKey() string {
-	if val := os.Getenv("JWT_PRE-SHARED_KEY"); val != "" {
+	if val := os.Getenv("JWT_PRE_SHARED_KEY"); val != "" {
 		return val
 	}
 	return key
+}
+
+func GetTargetServiceAccounts() []string {
+	if val := os.Getenv("TARGET_SERVICE_ACCOUNTS"); val != "" {
+		return strings.Split(val, ",")
+	}
+	return nil
+}
+
+func GetHandshakerServiceAddress() string {
+	if val := os.Getenv("HANDSHAKER_SERVICE_ADDRESS"); val != "" {
+		return val
+	}
+	return sharedALTS.HandshakerServiceAddress
 }

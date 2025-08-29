@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/weeback/grpc-project-template/internal/application/hello"
+	"github.com/weeback/grpc-project-template/internal/auth"
 	"github.com/weeback/grpc-project-template/internal/config"
 	"github.com/weeback/grpc-project-template/internal/infrastructure/mongodb"
 	"github.com/weeback/grpc-project-template/internal/infrastructure/transport/grpc"
@@ -14,15 +15,13 @@ import (
 	"github.com/weeback/grpc-project-template/pkg"
 	"github.com/weeback/grpc-project-template/pkg/net"
 
-	// Import unuse package 'github.com/weeback/grpc-project-template/pkg' with tag '_' to execute init() function of global package.
-	//	_ "github.com/weeback/grpc-project-template/pkg"
-
-	pb "github.com/weeback/grpc-project-template/pb/hello"
+	hellopb "github.com/weeback/grpc-project-template/pb/hello"
 
 	"github.com/gorilla/mux"
 
 	googlegrpc "google.golang.org/grpc"
 	googlealts "google.golang.org/grpc/credentials/alts"
+	"google.golang.org/grpc/keepalive"
 )
 
 var (
@@ -39,6 +38,13 @@ func init() {
 		fmt.Printf("failed to load firebase admin options: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Load ALTS options
+	if _, err := config.LoadALTS(); err != nil {
+		fmt.Printf("failed to load ALTS options: %v\n", err)
+		os.Exit(1)
+	}
+
 }
 
 func main() {
@@ -82,21 +88,37 @@ func main() {
 	//
 	// router.HandleFunc("/<path-to-entrypoint>", <handler-function-name>).Methods(<http-method(s)>)
 
+	auth := auth.New()
+
 	// This is listed Google service accounts defined to allow accepting requests from Cloud Run.
 	// If empty, it will allow every request.
-	expectedServiceAccounts := make([]string, 0)
+	altsOpt := config.GetOptionALTS()
+	expectedServiceAccounts := altsOpt.TargetServiceAccounts
 
 	// gRPC servers can use ALTS credentials to allow clients to connect to them,
 	// as illustrated next:
+	grpcOpt := config.GetOptionGRPC()
+	// Create gRPC server with increased timeouts and keepalive settings
 	inst := googlegrpc.NewServer(
 		googlegrpc.Creds(googlealts.NewServerCreds(googlealts.DefaultServerOptions())),
 		googlegrpc.MaxRecvMsgSize(config.GetOptionGRPC().MaxRecvMsgSize),
 		googlegrpc.MaxSendMsgSize(config.GetOptionGRPC().MaxSendMsgSize),
+		googlegrpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    grpcOpt.KeepaliveTime,
+			Timeout: grpcOpt.KeepaliveTimeout,
+		}),
+		googlegrpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             grpcOpt.KeepaliveTime,
+			PermitWithoutStream: true,
+		}),
+		googlegrpc.ConnectionTimeout(grpcOpt.ConnectionTimeout),
+		googlegrpc.StreamInterceptor(net.StreamInterceptor()),
+		googlegrpc.UnaryInterceptor(net.UnaryServerAuthInterceptor(expectedServiceAccounts, auth.AuthFunc)),
 	)
 	//
 	defer inst.Stop()
 	//
-	pb.RegisterHelloServiceServer(inst, grpc.NewHelloServiceHandler(helloRepo))
+	hellopb.RegisterHelloServiceServer(inst, grpc.NewHelloServiceHandler(helloRepo))
 
 	/** Apply middleware to the router HTTP/1 (RESTful API)
 	- Logging API request
@@ -104,28 +126,10 @@ func main() {
 	- Add middleware functions
 	*/
 	httpServer := net.Middleware(router, true)
-
-	grpcServer := net.AllowServiceAccounts(inst, expectedServiceAccounts)
-
+	grpcServer := net.Walk(inst)
 	mixed := net.MixHttp2(httpServer, grpcServer)
 
-	/** Open and listen port (:8080)
-	- The HttpServerWithConfig function is shortened from the following code:
-	```
-		def := &http.Server{
-			Addr: "0.0.0.0:8080",
-			Handler: mixed,
-			ReadTimeout: 5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-			IdleTimeout: 15 * time.Second,
-		}
-
-		if err := def.ListenAndServe(); err != nil {
-			fmt.Printf("Failed to start server: %v\n", err)
-		}
-	```
-	-It shortens and allows customization within the package without messing up the main function.
-	*/
+	// Open and listen port (:8080)
 	if err := net.HttpServerWithConfig(":8080", mixed).ListenAndServe(); err != nil {
 		fmt.Printf("Failed to start server: %v\n", err)
 	}

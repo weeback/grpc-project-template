@@ -72,13 +72,35 @@ func StreamInterceptor() grpc.StreamServerInterceptor {
 }
 
 // UnaryServerAuthInterceptor creates a server interceptor for attack middleware function to gRPC requests
-func UnaryServerAuthInterceptor(expectedServiceAccounts []string) grpc.UnaryServerInterceptor {
+func UnaryServerAuthInterceptor(expectedServiceAccounts []string, authFunc func(fullMethod string, bodyHash string, jwtStr string) error) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		var (
 			startTime = time.Now()
 			reqID     string
 			md        metadata.MD
+
+			bodyHash   string
+			jwtAuthStr string
 		)
+
+		//  Extract Metadata from context
+		if fromCtx, ok := metadata.FromIncomingContext(ctx); ok && fromCtx != nil {
+			md = fromCtx
+		}
+		if md != nil {
+			// Extract authorization from metadata
+			if auth := md.Get(headerAuthorization); len(auth) > 0 {
+				if strings.HasPrefix(auth[0], "Bearer ") {
+					jwtAuthStr = strings.TrimPrefix(auth[0], "Bearer ")
+				} else {
+					jwtAuthStr = auth[0]
+				}
+			}
+			// Extract request ID from metadata
+			if reqIDs := md.Get(xApiRequestId); len(reqIDs) > 0 {
+				reqID = reqIDs[0]
+			}
+		}
 
 		// Extract request ID if available
 		if r, ok := req.(interface{ GetReqId() string }); ok && r != nil {
@@ -90,6 +112,7 @@ func UnaryServerAuthInterceptor(expectedServiceAccounts []string) grpc.UnaryServ
 			zap.Bool("proto_marshaled", false),
 			zap.String("method", info.FullMethod),
 			zap.String("req_id", reqID),
+			zap.Any("metadata", md),
 		)
 		// Use the context with the logger
 		ctx = setLoggerToContext(ctx, reqLogger)
@@ -105,15 +128,6 @@ func UnaryServerAuthInterceptor(expectedServiceAccounts []string) grpc.UnaryServ
 			return nil, err
 		}
 
-		//  Extract Metadata from context
-		if fromCtx, ok := metadata.FromIncomingContext(ctx); ok && fromCtx != nil {
-			md = fromCtx
-		}
-		reqLogger = reqLogger.With(
-			zap.Bool("proto_marshaled", false),
-			zap.Any("metadata", md),
-		)
-
 		msg, ok := req.(proto.Message)
 		if ok {
 			// Marshal the proto message to log its SHA256 hash
@@ -125,6 +139,7 @@ func UnaryServerAuthInterceptor(expectedServiceAccounts []string) grpc.UnaryServ
 				)
 			} else {
 				sum := sha256.Sum256(b)
+				bodyHash = hex.EncodeToString(sum[:])
 				reqLogger = reqLogger.With(
 					zap.Bool("proto_marshaled", true),
 					zap.String("sum", hex.EncodeToString(sum[:])),
@@ -137,6 +152,14 @@ func UnaryServerAuthInterceptor(expectedServiceAccounts []string) grpc.UnaryServ
 				zap.Any("request", req),
 				zap.Errors("proto_marshal_error", []error{status.Errorf(codes.Internal, "request is not a proto message")}),
 			)
+		}
+
+		if err := authFunc(info.FullMethod, bodyHash, jwtAuthStr); err != nil {
+			reqLogger.Error("Authorization failed",
+				zap.String("body_hash", bodyHash),
+				zap.String("jwt", jwtAuthStr),
+				zap.Error(err))
+			return nil, status.Errorf(codes.Unauthenticated, "Authorization failed: %v", err)
 		}
 
 		//
