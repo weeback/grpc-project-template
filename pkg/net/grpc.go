@@ -1,12 +1,13 @@
 package net
 
 import (
-	"fmt"
+	"net/http"
+	"strings"
+
+	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
-	"net/http"
-	"strings"
 )
 
 func MixHttp2(rest, gRPC http.Handler) http.Handler {
@@ -23,7 +24,7 @@ func MixHttp2(rest, gRPC http.Handler) http.Handler {
 }
 
 // Walk for gRPC only
-func Walk(inst *grpc.Server, expectedServiceAccounts ...string) http.Handler {
+func Walk(inst *grpc.Server) http.Handler {
 	// Print gRPC service information
 	for key, inf := range inst.GetServiceInfo() {
 		for _, mt := range inf.Methods {
@@ -37,9 +38,12 @@ func Walk(inst *grpc.Server, expectedServiceAccounts ...string) http.Handler {
 			} else if mt.IsClientStream {
 				mode = "Client-side streaming RPC"
 			}
-			txt := fmt.Sprintf("%-30s | %s.(%s)", mode, key, mt.Name)
-			println("[gRPC]", txt)
+			// Print service information
+			getLogEntry().Debug("gRPC service registered",
+				zap.String("service", key),
+				zap.String("method", mt.Name),
+				zap.String("mode", mode))
 		}
 	}
-	return AllowServiceAccounts(inst, expectedServiceAccounts)
+	return inst
 }

@@ -2,7 +2,6 @@ package net
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -59,7 +58,6 @@ func UpgradeToWebSocket(w http.ResponseWriter, r *http.Request) (HubChannel, Mes
 	// init globalHubConnection
 	hub, err := globalHubConnection()
 	if err != nil {
-		log.Printf("Failed to get hub connection: %v", err)
 		return nil, nil, err
 	}
 	// Upgrade HTTP connection to WebSocket with global hub
@@ -94,7 +92,6 @@ func UpgradeToWebSocketCustom(hub *Hub, w http.ResponseWriter, r *http.Request) 
 	// Upgrade HTTP connection to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade error: %v", err)
 		return nil, nil, err
 	}
 	// Register client with hub

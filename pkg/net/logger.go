@@ -1,6 +1,7 @@
 package net
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,6 +24,18 @@ var (
 	}()
 )
 
+func getLogEntry() *zap.Logger {
+	return logger.NewEntry()
+}
+
+func getLoggerFromContext(ctx context.Context) *zap.Logger {
+	return logger.GetLoggerFromContext(ctx)
+}
+
+func setLoggerToContext(ctx context.Context, entry *zap.Logger) context.Context {
+	return logger.SetLoggerToContext(ctx, entry)
+}
+
 func apiLoggerHandler(h http.Handler) http.Handler {
 
 	// Define the API logger
@@ -44,7 +57,7 @@ func printLogApi(wc *ResponseWriter, r *http.Request, t time.Time) {
 		userAgent = r.Header.Get(headerUserAgent)
 		requestId = r.Header.Get(xApiRequestId)
 		clientId  = r.Header.Get(xApiClientId)
-	// more      string
+		// 	more      string
 	)
 	// Add the request-Id to entry
 	if requestId == "" {
@@ -67,10 +80,10 @@ func printLogApi(wc *ResponseWriter, r *http.Request, t time.Time) {
 
 	// Check if there is an error message
 	//if msg := cH.Get(xApiMoreError); msg != "" {
-	//more = fmt.Sprintf("%s > %s", more, msg)
+	//	more = fmt.Sprintf("%s > %s", more, msg)
 	//}
 
-	logger.NewEntry().Info("API request",
+	getLogEntry().Info("API request",
 		zap.Time("timestamp", time.Now()),
 		zap.String("hostname", hostname),
 		zap.String("remote_addr", r.RemoteAddr),
@@ -88,5 +101,5 @@ func printLogApi(wc *ResponseWriter, r *http.Request, t time.Time) {
 
 	// Log the request
 	// fmt.Printf("%s - %s | %20s --> %d %s - - %6s - %s - %s%s\n", time.Now().Format(time.DateTime), hostname,
-	// r.RemoteAddr, wc.StatusCode(), wc.Status(), r.Method, r.URL.String(), time.Since(t).String(), more)
+	//	r.RemoteAddr, wc.StatusCode(), wc.Status(), r.Method, r.URL.String(), time.Since(t).String(), more)
 }

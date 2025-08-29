@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/weeback/grpc-project-template/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -42,13 +41,13 @@ func Middleware(ro *mux.Router, enableCORS bool, middlewareFunc ...http.HandlerF
 	loggerIntecepter := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Create logger with request context
-			reqLogger := logger.NewEntry().With(
+			reqLogger := getLogEntry().With(
 				zap.String("http_method", r.Method),
 				zap.String("http_path", r.URL.Path),
 				zap.String("req_id", r.Header.Get(xApiRequestId)),
 			)
 			// Use the context with the logger
-			rc := r.WithContext(logger.SetLoggerToContext(r.Context(), reqLogger))
+			rc := r.WithContext(setLoggerToContext(r.Context(), reqLogger))
 			h.ServeHTTP(w, rc)
 		})
 	}

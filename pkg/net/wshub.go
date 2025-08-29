@@ -3,13 +3,13 @@ package net
 import (
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 )
 
 // WebSocket upgrader with basic configuration
@@ -74,34 +74,44 @@ type Hub struct {
 // Run starts the hub and handles client registration/unregistration and broadcasting
 func (h *Hub) run() {
 	h.once.Do(func() {
+		entry := getLogEntry()
+		// Start the hub's main loop
 		for {
 			select {
 			case client := <-h.register:
 				h.clients[client] = true
-				log.Printf("Client %s connected. Total clients: %d", client.id, len(h.clients))
+				entry.Debug("Client connected",
+					zap.String("client_id", client.id), zap.Int("total_clients", len(h.clients)))
 
 			case client := <-h.unregister:
 				if _, ok := h.clients[client]; ok {
 					delete(h.clients, client)
 					close(client.send)
 					close(client.recv)
-					log.Printf("Client %s disconnected. Total clients: %d", client.id, len(h.clients))
+					entry.Debug("Client disconnected",
+						zap.String("client_id", client.id),
+						zap.Int("total_clients", len(h.clients)))
 				} else {
-					log.Printf("Client %s not found in hub or already disconnected", client.id)
+					entry.Warn("Client not found in hub or already disconnected",
+						zap.String("client_id", client.id))
 				}
 
 			case message := <-h.broadcast:
 				// Broadcast message to all connected clients
 				for client := range h.clients {
 					if err := client.write(websocket.TextMessage, message); err != nil {
-						log.Printf("Error broadcast sending text message to client %s: %v", client.id, err)
+						entry.Error("Error broadcast sending text message to client",
+							zap.String("client_id", client.id),
+							zap.Error(err))
 					}
 				}
 			case bin := <-h.broadcastBin:
 				// Broadcast binary message to all connected clients
 				for client := range h.clients {
 					if err := client.write(websocket.BinaryMessage, bin); err != nil {
-						log.Printf("Error broadcast sending binary message to client %s: %v", client.id, err)
+						entry.Error("Error broadcast sending binary message to client",
+							zap.String("client_id", client.id),
+							zap.Error(err))
 					}
 				}
 			}
@@ -192,8 +202,8 @@ func (c *Client) ChangeID(id string) error {
 	if id == "" {
 		return fmt.Errorf("invalid ID provided for client %s, keeping the current ID", c.id)
 	}
-	c.id = id
-	log.Printf("Client ID changed to %s", c.id) // Log the ID change
+	c.id = id // Log the ID change
+	getLogEntry().Info("Client ID changed", zap.String("client_id", c.id))
 	return nil
 }
 
@@ -256,6 +266,8 @@ func (c *Client) readPump() {
 		c.conn.Close()
 	}()
 
+	entry := getLogEntry()
+
 	// Set read deadline and pong handler for keepalive
 	c.conn.SetReadDeadline(time.Now().Add(readTimeout))
 	c.conn.SetPongHandler(func(string) error {
@@ -267,20 +279,26 @@ func (c *Client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket error: %v", err)
+				entry.Error("WebSocket read error",
+					zap.String("client_id", c.id),
+					zap.Error(err))
 			}
 			break
 		}
 
 		// Process received message
-		log.Printf("Received from client %s: %s", c.id, string(message))
+		entry.Info("Received message from client",
+			zap.String("client_id", c.id),
+			zap.ByteString("message", message))
 
 		// Process the message (e.g., broadcast it to other clients)
 
 		select {
 		case c.recv <- message:
 		case <-time.After(idleTimeout):
-			log.Printf("Client %s idle timeout, skip message: %s\n", c.id, string(message))
+			entry.Warn("Client idle timeout, skip message",
+				zap.String("client_id", c.id),
+				zap.ByteString("message", message))
 		default:
 			close(c.recv)
 			delete(c.hub.clients, c)
@@ -290,6 +308,8 @@ func (c *Client) readPump() {
 
 // writePump handles writing messages to the WebSocket connection
 func (c *Client) writePump() {
+
+	entry := getLogEntry()
 	ticker := time.NewTicker(pingCycle)
 	defer func() {
 		ticker.Stop()
@@ -297,7 +317,8 @@ func (c *Client) writePump() {
 	}()
 
 	for {
-		log.Printf("Writing to client %s ... ", c.id)
+		entry.Info("Writing to client",
+			zap.String("client_id", c.id))
 		select {
 		case message, ok := <-c.send:
 			if !ok {
@@ -306,7 +327,8 @@ func (c *Client) writePump() {
 				return
 			}
 			if len(message) == 0 {
-				log.Printf("No message to send to client %s", c.id)
+				entry.Warn("No message to send to client",
+					zap.String("client_id", c.id))
 				continue
 			}
 
@@ -324,27 +346,35 @@ func (c *Client) writePump() {
 					messageType = websocket.BinaryMessage
 					actualMessage = message[2:] // Remove the prefix
 				default:
-					log.Printf("Unknown message type %d, treating as text", message[0])
+					entry.Warn("Unknown message type, treating as text",
+						zap.String("client_id", c.id),
+						zap.ByteString("message", message))
 					messageType = websocket.TextMessage
 					actualMessage = message[1:] // Remove the prefix
 				}
 			}
 
 			if err := c.conn.WriteMessage(messageType, actualMessage); err != nil {
-				log.Printf("Failed to write message to client %s: %v", c.id, err)
+				entry.Error("Failed to write message to client",
+					zap.String("client_id", c.id),
+					zap.Error(err))
 			}
 
 			// Log the message sent to the client
-			txt := string(actualMessage)
+			entry = entry.With(zap.String("client_id", c.id), zap.ByteString("message", actualMessage))
 			if messageType == websocket.BinaryMessage {
-				txt = fmt.Sprintf("Binary message of length %d: %s", len(actualMessage), base64.StdEncoding.EncodeToString(actualMessage))
+				entry = entry.With(zap.String("message",
+					fmt.Sprintf("Binary message of length %d: %s", len(actualMessage), base64.StdEncoding.EncodeToString(actualMessage))))
 			}
 			// Process write message
-			log.Printf("Sent to client %s: %s", c.id, txt)
+			entry.Info("Sent to client")
 
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				entry.Error("Failed to send ping to client",
+					zap.String("client_id", c.id),
+					zap.Error(err))
 				return
 			}
 		}
