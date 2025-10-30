@@ -64,7 +64,7 @@ func WriteError(w http.ResponseWriter, httpStatus int, err error) {
 	}
 
 	if warn := write(); warn != nil {
-		println(warn.Error())
+		println("\n" + warn.Error())
 	}
 }
 

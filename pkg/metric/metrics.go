@@ -156,7 +156,7 @@ func (m *metrics) sendToGCP(ctx context.Context, timeSeries []*monitoringpb.Time
 
 		// respect minimum sampling period
 		if delta := time.Since(m.lastTime); delta <= m.minimumSamplingPeriod {
-			fmt.Printf("[DEBUG] waiting for remaining time: %s\n", delta.String())
+			//	fmt.Printf("[DEBUG] waiting for remaining time: %s\n", delta.String())
 			<-time.After(delta)
 		}
 
@@ -196,16 +196,16 @@ func (m *metrics) sendToGCP(ctx context.Context, timeSeries []*monitoringpb.Time
 			cancel()
 		}()
 		// send all metrics
-		fmt.Printf("[DEBUG] Sending %d time-series to GCP\n", len(aggregateMetrics))
+		//	fmt.Printf("[DEBUG] Sending %d time-series to GCP\n", len(aggregateMetrics))
 		if err := m.client.CreateTimeSeries(ctx, &monitoringpb.CreateTimeSeriesRequest{
 			Name:       fmt.Sprintf("projects/%s", m.projectID),
 			TimeSeries: aggregateMetrics,
 		}); err != nil {
-			fmt.Printf("[DEBUG] failed to send cached metrics to GCP: %v\n", err)
+			//	fmt.Printf("[DEBUG] failed to send cached metrics to GCP: %v\n", err)
 			c <- err
 			return
 		} else {
-			fmt.Printf("[DEBUG] sent %d metrics to GCP successfully\n", len(aggregateMetrics))
+			//	fmt.Printf("[DEBUG] sent %d metrics to GCP successfully\n", len(aggregateMetrics))
 		}
 		c <- nil
 	}()
@@ -216,19 +216,19 @@ func (m *metrics) sendToGCP(ctx context.Context, timeSeries []*monitoringpb.Time
 	case err := <-c:
 		// goroutine finished
 		if err != nil {
-			fmt.Printf("[DEBUG] metrics sent to GCP, err=%v\n", err)
+			//	fmt.Printf("[DEBUG] metrics sent to GCP, err=%v\n", err)
 			return err
 		}
-		fmt.Printf("[DEBUG] metrics sent to GCP successfully\n")
+		//	fmt.Printf("[DEBUG] metrics sent to GCP successfully\n")
 		return nil
 	case <-time.After(999 * time.Millisecond):
-		fmt.Println("[DEBUG] sending metrics to longtime, this will continue to run in background")
+		//	fmt.Println("[DEBUG] sending metrics to longtime, this will continue to run in background")
 		return nil
 	}
 }
 
 func (m *metrics) sync() error {
-	fmt.Println("[DEBUG] freezing cached ...")
+	//fmt.Println("[DEBUG] freezing cached ...")
 	// Set last-time is in the past to force sending cached metrics
 	m.forceFreeze = true
 	// Trigger sending cached metrics

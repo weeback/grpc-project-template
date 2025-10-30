@@ -35,7 +35,7 @@ func GetRawData(r *http.Request) ([]byte, error) {
 
 	defer func(Body io.ReadCloser) {
 		if err := Body.Close(); err != nil {
-			println(err.Error())
+			println("\n" + err.Error())
 		}
 	}(r.Body)
 

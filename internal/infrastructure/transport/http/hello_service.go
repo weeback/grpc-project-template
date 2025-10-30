@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"net/http"
 
 	"github.com/weeback/grpc-project-template/internal/entity/hello"
 	"github.com/weeback/grpc-project-template/pkg"
@@ -139,6 +140,6 @@ func (h *HelloServiceHandler) HealthCheck(w http.ResponseWriter, r *http.Request
 	>> Build at 2025-04-12T00:00:00Z
 	*/
 	if _, warn := bytes.NewBufferString(version).WriteTo(w); warn != nil {
-		println(warn.Error())
+		println("\n" + warn.Error())
 	}
 }
